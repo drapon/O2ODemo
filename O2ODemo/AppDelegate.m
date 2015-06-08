@@ -46,16 +46,51 @@ static NotificationManager *manager = nil;
 
     
     //リモートプッシュ通知を受信するためのdeviceTokenを要求
+    [[UIApplication sharedApplication] registerForRemoteNotifications];
     
     //application:didFinishLaunchingWithOptions:のreturn文前に追加
+    manager = [[NotificationManager alloc] init];
     
     return YES;
 }
 
 //デバイストークンがAPNsから発行された時に呼び出されるデリゲートメソッド
+- (void)application:(UIApplication *)application
+didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken
+{
+    //NCMBInstallation作成
+    NCMBInstallation *installation = [NCMBInstallation currentInstallation];
+    //デバイストークンをセット
+    [installation setDeviceTokenFromData:deviceToken];
+    //ニフティクラウド mobile  backendのデータストアに登録
+    [installation saveInBackgroundWithBlock:^(NSError *error) {
+        if(!error){
+            //端末情報の登録が成功した場合の処理
+        } else {
+            //端末情報の登録が失敗した場合の処理
+        }
+    }];
+}
 
 
 //APNsから配信されたプッシュ通知を受信した時に呼び出されるデリゲートメソッド
+- (void)application:(UIApplication *)application
+didReceiveRemoteNotification:(NSDictionary *)userInfo
+fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler
+{
+    //ペイロードからセール店舗のIDを取得
+    NSString *locationId = nil;
+    locationId = [userInfo objectForKey:@"locationId"];
+    if (locationId){
+        //Locaton Notificationの設定
+        [manager searchLocations:locationId block:^(NSError *error) {
+            if (error){
+                NSLog(@"error:%@",error);
+            }
+            completionHandler(UIBackgroundFetchResultNewData);
+        }];
+    }
+}
 
 
 - (void)applicationWillResignActive:(UIApplication *)application {
